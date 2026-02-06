@@ -49,9 +49,10 @@ Parser behavior:
 
 Logs are usually found in `/var/lib/smartmontools/` on Linux systems.
 
-## Example Data
+## Screenshot
 
-Sample files are included in `examples/` and can be used to test the UI quickly.
+![screenshot](doc/screenshot.png)
+
 
 ## Tech Stack
 
@@ -86,16 +87,10 @@ npm run preview
 - Timestamps are displayed using your local browser time formatting from parsed
   log data.
 
-## Deploy To GitHub Pages (Actions)
+## Online version
 
-This repo includes a workflow at `.github/workflows/deploy-pages.yml` that:
+This repo includes a workflow at `.github/workflows/deploy-pages.yml` that
+deploys to https://giorginolab.github.io/smartmontools_log_plotter/ . Data
+is processed locally on your machine.
 
-- builds the app on pushes to `main` (or manually via workflow dispatch)
-- publishes `dist/` to GitHub Pages
-- sets the Vite base path automatically for project pages
 
-One-time repository setup:
-
-1. Open repository `Settings` -> `Pages`.
-2. Set `Source` to `GitHub Actions`.
-3. Push to `main` (or run the workflow manually from `Actions`).
