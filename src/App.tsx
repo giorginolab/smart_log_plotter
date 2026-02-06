@@ -259,14 +259,20 @@ export default function App() {
               Upload a log file; choose attributes; plot raw and normalized values over time.
             </div>
             <div className="subtitle">
-              SMART attribute descriptions:{" "}
+              SMART attribute descriptions from {" "}
               <a
                 href="https://en.wikipedia.org/wiki/Self-Monitoring,_Analysis_and_Reporting_Technology"
                 target="_blank"
                 rel="noopener noreferrer"
               >
                 Wikipedia
-              </a>
+              </a>. {" "}
+                Source on <a
+                href="https://github.com/giorginolab/smartmontools_log_plotter"
+                target="_blank"
+                rel="noopener noreferrer"
+              >GitHub
+              </a>. 
             </div>
           </div>
 
