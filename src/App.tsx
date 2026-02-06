@@ -468,7 +468,7 @@ export default function App() {
                       <React.Fragment key={selectedAttr}>
                         {showRaw && (
                           <Line
-                            type="monotone"
+                            type="linear"
                             yAxisId="raw"
                             dataKey={`${selectedAttr}_raw`}
                             name={`${attrLabel(selectedAttr)} (raw)`}
@@ -481,7 +481,7 @@ export default function App() {
                         )}
                         {showNorm && (
                           <Line
-                            type="monotone"
+                            type="linear"
                             yAxisId="norm"
                             dataKey={`${selectedAttr}_norm`}
                             name={`${attrLabel(selectedAttr)} (norm)`}
