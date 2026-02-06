@@ -229,12 +229,30 @@ function pickPalette(idx: number): string {
   return colors[idx % colors.length];
 }
 
+function formatAxisTick(v: unknown): string {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "";
+  const abs = Math.abs(n);
+  if (abs >= 1e12) return `${(n / 1e12).toFixed(2)}T`;
+  if (abs >= 1e9) return `${(n / 1e9).toFixed(2)}B`;
+  if (abs >= 1e6) return `${(n / 1e6).toFixed(2)}M`;
+  if (abs >= 1e3) return `${(n / 1e3).toFixed(2)}K`;
+  return String(n);
+}
+
+type PlotMode = "raw" | "norm" | "both";
+
 export default function App() {
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   const [parsed, setParsed] = useState<Parsed | null>(null);
   const [selectedAttr, setSelectedAttr] = useState<string | null>(null);
+  const [plotMode, setPlotMode] = useState<PlotMode>("both");
   const [status, setStatus] = useState<string>("Upload a log file to plot");
+
+  const showRaw = plotMode === "raw" || plotMode === "both";
+  const showNorm = plotMode === "norm" || plotMode === "both";
+  const plotModeLabel = plotMode === "both" ? "Both" : plotMode === "raw" ? "Raw" : "Normalized";
 
   const summary = useMemo(() => {
     if (!parsed) return null;
@@ -257,23 +275,25 @@ export default function App() {
     if (!selectedAttr) return [] as any[];
 
     const map = new Map<number, any>();
-    const rawSeries = parsed.byAttr[selectedAttr]?.raw ?? [];
-    const normSeries = parsed.byAttr[selectedAttr]?.norm ?? [];
-
-    for (const p of rawSeries) {
-      const row = map.get(p.t) ?? { t: p.t };
-      row[`${selectedAttr}_raw`] = p.v;
-      map.set(p.t, row);
+    if (showRaw) {
+      const rawSeries = parsed.byAttr[selectedAttr]?.raw ?? [];
+      for (const p of rawSeries) {
+        const row = map.get(p.t) ?? { t: p.t };
+        row[`${selectedAttr}_raw`] = p.v;
+        map.set(p.t, row);
+      }
     }
-
-    for (const p of normSeries) {
-      const row = map.get(p.t) ?? { t: p.t };
-      row[`${selectedAttr}_norm`] = p.v;
-      map.set(p.t, row);
+    if (showNorm) {
+      const normSeries = parsed.byAttr[selectedAttr]?.norm ?? [];
+      for (const p of normSeries) {
+        const row = map.get(p.t) ?? { t: p.t };
+        row[`${selectedAttr}_norm`] = p.v;
+        map.set(p.t, row);
+      }
     }
 
     return Array.from(map.values()).sort((a, b) => a.t - b.t);
-  }, [parsed, selectedAttr]);
+  }, [parsed, selectedAttr, showRaw, showNorm]);
 
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -302,6 +322,14 @@ export default function App() {
     setSelectedAttr(null);
   }
 
+  function cyclePlotMode() {
+    setPlotMode((prev) => {
+      if (prev === "both") return "raw";
+      if (prev === "raw") return "norm";
+      return "both";
+    });
+  }
+
   const selectedAttrColor = useMemo(() => {
     if (!parsed || !selectedAttr) return pickPalette(0);
     const idx = parsed.attrs.indexOf(selectedAttr);
@@ -327,6 +355,14 @@ export default function App() {
               accept=".txt,.log,.csv,.tsv,*/*"
               onChange={onFileChange}
             />
+
+            <Button
+              variant="secondary"
+              disabled={!parsed || !selectedAttr}
+              onClick={cyclePlotMode}
+            >
+              Mode: {plotModeLabel}
+            </Button>
 
             <Button
               variant="secondary"
@@ -408,35 +444,20 @@ export default function App() {
                       tickFormatter={(v) => formatMs(Number(v)).slice(11, 19)}
                       minTickGap={20}
                     />
-                    <YAxis
-                      yAxisId="raw"
-                      orientation="left"
-                      tickFormatter={(v) => {
-                        const n = Number(v);
-                        if (!Number.isFinite(n)) return "";
-                        // Compact large counters
-                        const abs = Math.abs(n);
-                        if (abs >= 1e12) return `${(n / 1e12).toFixed(2)}T`;
-                        if (abs >= 1e9) return `${(n / 1e9).toFixed(2)}B`;
-                        if (abs >= 1e6) return `${(n / 1e6).toFixed(2)}M`;
-                        if (abs >= 1e3) return `${(n / 1e3).toFixed(2)}K`;
-                        return String(n);
-                      }}
-                    />
-                    <YAxis
-                      yAxisId="norm"
-                      orientation="right"
-                      tickFormatter={(v) => {
-                        const n = Number(v);
-                        if (!Number.isFinite(n)) return "";
-                        const abs = Math.abs(n);
-                        if (abs >= 1e12) return `${(n / 1e12).toFixed(2)}T`;
-                        if (abs >= 1e9) return `${(n / 1e9).toFixed(2)}B`;
-                        if (abs >= 1e6) return `${(n / 1e6).toFixed(2)}M`;
-                        if (abs >= 1e3) return `${(n / 1e3).toFixed(2)}K`;
-                        return String(n);
-                      }}
-                    />
+                    {showRaw && (
+                      <YAxis
+                        yAxisId="raw"
+                        orientation="left"
+                        tickFormatter={formatAxisTick}
+                      />
+                    )}
+                    {showNorm && (
+                      <YAxis
+                        yAxisId="norm"
+                        orientation="right"
+                        tickFormatter={formatAxisTick}
+                      />
+                    )}
                     <Tooltip
                       labelFormatter={(v) => formatMs(Number(v))}
                       formatter={(value: any, name: any) => [value, String(name)]}
@@ -445,29 +466,33 @@ export default function App() {
 
                     {selectedAttr && (
                       <React.Fragment key={selectedAttr}>
-                        <Line
-                          type="monotone"
-                          yAxisId="raw"
-                          dataKey={`${selectedAttr}_raw`}
-                          name={`${attrLabel(selectedAttr)} (raw)`}
-                          dot={false}
-                          stroke={selectedAttrColor}
-                          strokeWidth={2}
-                          connectNulls={false}
-                          isAnimationActive={false}
-                        />
-                        <Line
-                          type="monotone"
-                          yAxisId="norm"
-                          dataKey={`${selectedAttr}_norm`}
-                          name={`${attrLabel(selectedAttr)} (norm)`}
-                          dot={false}
-                          stroke={selectedAttrColor}
-                          strokeDasharray="6 3"
-                          strokeWidth={2}
-                          connectNulls={false}
-                          isAnimationActive={false}
-                        />
+                        {showRaw && (
+                          <Line
+                            type="monotone"
+                            yAxisId="raw"
+                            dataKey={`${selectedAttr}_raw`}
+                            name={`${attrLabel(selectedAttr)} (raw)`}
+                            dot={false}
+                            stroke={selectedAttrColor}
+                            strokeWidth={2}
+                            connectNulls={false}
+                            isAnimationActive={false}
+                          />
+                        )}
+                        {showNorm && (
+                          <Line
+                            type="monotone"
+                            yAxisId="norm"
+                            dataKey={`${selectedAttr}_norm`}
+                            name={`${attrLabel(selectedAttr)} (norm)`}
+                            dot={false}
+                            stroke={selectedAttrColor}
+                            strokeDasharray="6 3"
+                            strokeWidth={2}
+                            connectNulls={false}
+                            isAnimationActive={false}
+                          />
+                        )}
                       </React.Fragment>
                     )}
                   </LineChart>
@@ -475,7 +500,7 @@ export default function App() {
               </div>
 
               <div className="muted">
-                X-axis is time; left Y-axis is raw value; right Y-axis is normalized value.
+                X-axis is time; mode is {plotModeLabel.toLowerCase()}.
               </div>
             </CardContent>
           </Card>
