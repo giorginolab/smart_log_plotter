@@ -254,25 +254,12 @@ export default function App() {
       <div className="container">
         <div className="top-bar">
           <div>
-            <div className="title">SMART Log Plotter</div>
+            <div className="title">Smartmontools Log Plotter</div>
             <div className="subtitle">
-              Upload a log file; choose attributes; plot raw and normalized values over time.
+              Upload a <a href="https://smartmontools.com/">smartmontools</a>-generated log file; choose attributes; plot raw and normalized values over time.
             </div>
             <div className="subtitle">
-              SMART attribute descriptions from {" "}
-              <a
-                href="https://en.wikipedia.org/wiki/Self-Monitoring,_Analysis_and_Reporting_Technology"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Wikipedia
-              </a>. {" "}
-                Source on <a
-                href="https://github.com/giorginolab/smartmontools_log_plotter"
-                target="_blank"
-                rel="noopener noreferrer"
-              >GitHub
-              </a>. 
+             Logs are usually found in `/var/lib/smartmontools/`.
             </div>
           </div>
 
@@ -441,8 +428,21 @@ export default function App() {
             <div className="mono small">
               YYYY-MM-DD HH:mm:ss; attr; norm; raw; attr; norm; raw; ...
             </div>
-            <div className="muted">
-              Notes: the parser splits on semicolons, trims whitespace/tabs, ignores empty trailing separators, and skips non-numeric values. Logs are usually found in `/var/lib/smartmontools/`.
+            <div className="subtitle">
+              SMART attribute descriptions from {" "}
+              <a
+                href="https://en.wikipedia.org/wiki/Self-Monitoring,_Analysis_and_Reporting_Technology"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Wikipedia
+              </a>. {" "}
+                Source on <a
+                href="https://github.com/giorginolab/smartmontools_log_plotter"
+                target="_blank"
+                rel="noopener noreferrer"
+              >GitHub
+              </a>. 
             </div>
           </CardContent>
         </Card>
