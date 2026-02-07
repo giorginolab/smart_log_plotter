@@ -164,6 +164,8 @@ export default function App() {
   const [plotMode, setPlotMode] = useState<PlotMode>("both");
   const [status, setStatus] = useState<string>("Upload a log file to plot");
   const [brushRange, setBrushRange] = useState<{ startIndex: number; endIndex: number } | null>(null);
+  const [isDragOver, setIsDragOver] = useState<boolean>(false);
+  const [dragDepth, setDragDepth] = useState<number>(0);
 
   const showRaw = plotMode === "raw" || plotMode === "both";
   const showNorm = plotMode === "norm" || plotMode === "both";
@@ -238,9 +240,9 @@ export default function App() {
     setBrushRange(null);
   }
 
-  async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (!f) return;
+  async function loadFromFile(f: File) {
+    setBrushRange(null);
+    setSelectedAttr(null);
 
     setStatus("Loading…");
     const text = await f.text();
@@ -259,6 +261,50 @@ export default function App() {
     setStatus("Ready");
     // default select first attr
     setSelectedAttr(p.attrs[0] ?? null);
+  }
+
+  async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    await loadFromFile(f);
+  }
+
+  function dragHasFiles(e: React.DragEvent<HTMLElement>): boolean {
+    const types = e.dataTransfer?.types;
+    return !!types && Array.from(types).includes("Files");
+  }
+
+  function onDragEnter(e: React.DragEvent<HTMLDivElement>) {
+    if (!dragHasFiles(e)) return;
+    e.preventDefault();
+    setDragDepth((n) => n + 1);
+    setIsDragOver(true);
+  }
+
+  function onDragOver(e: React.DragEvent<HTMLDivElement>) {
+    if (!dragHasFiles(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  }
+
+  function onDragLeave(e: React.DragEvent<HTMLDivElement>) {
+    if (!dragHasFiles(e)) return;
+    e.preventDefault();
+    setDragDepth((n) => {
+      const next = Math.max(0, n - 1);
+      if (next === 0) setIsDragOver(false);
+      return next;
+    });
+  }
+
+  async function onDrop(e: React.DragEvent<HTMLDivElement>) {
+    if (!dragHasFiles(e)) return;
+    e.preventDefault();
+    setDragDepth(0);
+    setIsDragOver(false);
+    const f = e.dataTransfer.files?.[0];
+    if (!f) return;
+    await loadFromFile(f);
   }
 
   function clearSelection() {
@@ -280,7 +326,14 @@ export default function App() {
   }, [parsed, selectedAttr]);
 
   return (
-    <div className="page">
+    <div
+      className={`page ${isDragOver ? "drag-over" : ""}`}
+      onDragEnter={onDragEnter}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+    >
+      {isDragOver && <div className="drop-hint">Drop log file to load</div>}
       <div className="container">
         <div className="top-bar">
           <div>
@@ -290,6 +343,9 @@ export default function App() {
             </div>
             <div className="subtitle">
              Logs are usually found in `/var/lib/smartmontools/`.
+            </div>
+            <div className="subtitle">
+             You can also drag and drop a file anywhere on this page.
             </div>
           </div>
 
