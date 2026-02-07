@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent } from "./components/ui/card";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
@@ -13,6 +13,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  Brush,
 } from "recharts";
 
 /**
@@ -162,6 +163,7 @@ export default function App() {
   const [selectedAttr, setSelectedAttr] = useState<string | null>(null);
   const [plotMode, setPlotMode] = useState<PlotMode>("both");
   const [status, setStatus] = useState<string>("Upload a log file to plot");
+  const [brushRange, setBrushRange] = useState<{ startIndex: number; endIndex: number } | null>(null);
 
   const showRaw = plotMode === "raw" || plotMode === "both";
   const showNorm = plotMode === "norm" || plotMode === "both";
@@ -207,6 +209,34 @@ export default function App() {
 
     return Array.from(map.values()).sort((a, b) => a.t - b.t);
   }, [parsed, selectedAttr, showRaw, showNorm]);
+
+  const fullBrushEndIndex = Math.max(chartData.length - 1, 0);
+  const brushStartIndex = brushRange?.startIndex ?? 0;
+  const brushEndIndex = brushRange?.endIndex ?? fullBrushEndIndex;
+
+  useEffect(() => {
+    // Reset zoom whenever a new file or attribute is selected.
+    setBrushRange(null);
+  }, [parsed, selectedAttr]);
+
+  function onBrushChange(next: any) {
+    if (chartData.length === 0) {
+      setBrushRange(null);
+      return;
+    }
+    const startIndex = Number(next?.startIndex);
+    const endIndex = Number(next?.endIndex);
+    if (!Number.isInteger(startIndex) || !Number.isInteger(endIndex)) return;
+    if (startIndex <= 0 && endIndex >= fullBrushEndIndex) {
+      setBrushRange(null);
+      return;
+    }
+    setBrushRange({ startIndex, endIndex });
+  }
+
+  function resetZoom() {
+    setBrushRange(null);
+  }
 
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -287,6 +317,14 @@ export default function App() {
             >
               Clear
             </Button>
+
+            <Button
+              variant="secondary"
+              disabled={!selectedAttr || chartData.length === 0 || !brushRange}
+              onClick={resetZoom}
+            >
+              Reset Zoom
+            </Button>
           </div>
         </div>
 
@@ -351,7 +389,10 @@ export default function App() {
             <CardContent className="chart">
               <div className="chart-box">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 10, right: 20, bottom: 10, left: 10 }}>
+                  <LineChart
+                    data={chartData}
+                    margin={{ top: 10, right: 20, bottom: 10, left: 10 }}
+                  >
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis
                       dataKey="t"
@@ -411,12 +452,22 @@ export default function App() {
                         )}
                       </React.Fragment>
                     )}
+                    <Brush
+                      dataKey="t"
+                      height={26}
+                      stroke={selectedAttrColor}
+                      travellerWidth={8}
+                      tickFormatter={(v) => formatDateMs(Number(v))}
+                      startIndex={brushStartIndex}
+                      endIndex={brushEndIndex}
+                      onChange={onBrushChange}
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
 
               <div className="muted">
-                X-axis is date; mode is {plotModeLabel.toLowerCase()}.
+                X-axis is date; mode is {plotModeLabel.toLowerCase()}. Drag the handles in the mini timeline to zoom; use Reset Zoom to restore.
               </div>
             </CardContent>
           </Card>
